@@ -7,7 +7,25 @@
 
 void smooth_image(int input[HEIGHT][WIDTH], int output[HEIGHT][WIDTH])
 {
+    for(int i = 0; i < HEIGHT; i++)
+    {
+        for(int j = 0; j < WIDTH; j++)
+        {
+            int sum = input[i][j];
+            int count = 1;
 
+            // Upper neighbor
+            if(i > 0) {sum += input[i - 1][j];count++; }
+            // Lower neighbor
+            if(i < HEIGHT - 1) {sum += input[i + 1][j]; count++; }
+            // Left neighbor
+            if(j > 0) {sum += input[i][j - 1]; count++; }
+            // Right neighbor
+            if(j < WIDTH - 1) {sum += input[i][j + 1]; count++; }
+
+            output[i][j] = sum / count;
+        }
+    }
 }
 
 int main(int argc, char *argv[])
@@ -41,8 +59,29 @@ int main(int argc, char *argv[])
             }
         }
     }
+    fclose(input);
 
+    // Processing
+    smooth_image(image, result);
 
+    // Write the output file
+    FILE *output = fopen("saida.txt", 'w');
+    if(!output)
+    {
+        perror("Can't create output file...");
+        return 1;
+    }
 
+    for(int i = 0; i < HEIGHT; i++)
+    {
+        for(int j = 0; j < WIDTH; j++)
+        {
+            fprintf(output, "%d ", result[i][j]);
+        }
+        fprintf(output, "\n");
+    }
+    fclose(output);
+
+    printf("Smoothing finished!");
     return 0;
 }
