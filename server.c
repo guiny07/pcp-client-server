@@ -3,7 +3,17 @@
 #include <string.h> 
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 #include "utils.h"
+
+
+#define N_CLIENT 1
+#define N_BLOCKS 2 
+#define CLIENT_HEIGHT 2000
+#define CLIENT_WIDTH 1000
+
+void generate_blocks(Block *blocks);
+void *handle_client(void *arg);
 
 int main(int argc, char *argv[])
 {
@@ -13,8 +23,11 @@ int main(int argc, char *argv[])
     static int image[HEIGHT][WIDTH];
     static int result[HEIGHT][WIDTH];
 
-    FILE *input = fopen("entrada.txt", "r");
-    if(!input) { error("Error opening entrada.txt..."); }
+    pthread_t threads[N_CLIENT];
+
+    // Read image
+    FILE *input = fopen("fake_image.txt", "r");
+    if(!input) { error("Error opening fake_image.txt..."); }
 
     for(int i = 0; i < HEIGHT; i++)
     {
@@ -25,6 +38,10 @@ int main(int argc, char *argv[])
     }
     fclose(input);
     
+    Block blocks[N_BLOCKS];
+    generate_blocks(blocks);
+
+    // Creates server
     if((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         error("Error creating socket...");
 
@@ -34,26 +51,62 @@ int main(int argc, char *argv[])
 
     if(bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0)
         error("Bind error");
-    if(listen(server_fd, 1) < 0)
+    if(listen(server_fd, N_CLIENT) < 0)
         error("Listen error");
 
-    printf("Server waiting for connection... \n");
-    client_fd = accept(server_fd, (struct sockaddr*)&address, &addrlen);
+    printf("[Server] Waiting for %d clients...\n", N_CLIENT);
 
-    if(client_fd < 0)
-        error("Error trying to accept");
-    printf("Client connected! \n");
+    //Accepting connections and create threads for each client.
+    if(N_CLIENT == 1)
+    {
+        int client_fd = accept(server_fd, (struct sockaddr *)&address, &addrlen);
+        if(client_fd < 0)
+            error("Accept error \n");
 
-    //Send image
-    send(client_fd, image, sizeof(image), 0);
+        printf("[Server] Client connected \n");
 
-    size_t received = recv(client_fd, result, sizeof(result), MSG_WAITALL);
+        for(int i = 0; i < N_BLOCKS; i++)
+        {
+            ClientData *data = malloc(sizeof(ClientData));
+            data->client_fd = client_fd;
+            data->block = blocks[i];
+            data->image = image;
+            data->result = result;
+            send(client_fd, &blocks[i], sizeof(Block), 0);
+            send(client_fd, image, sizeof(image), 0);
 
-    printf("Image processed and received! \n");
+        }
 
-    // Save result
-    FILE *output = fopen("saida.txt", "w");
+        recv(client_fd, result, sizeof(result), MSG_WAITALL);
 
+    }
+    else
+    {
+        for(int i = 0; i < N_CLIENT; i++)
+        {
+            int client_fd = accept(server_fd, (struct sockaddr *)&address, &addrlen);
+            if(client_fd < 0)
+            error("Accept error \n");
+
+            printf("[Server] Client %d connected. \n", i);
+
+            ClientData *data = malloc(sizeof(ClientData));
+            data->client_fd = client_fd;
+            data->block = blocks[i];
+            data->image = image;
+            data->result = result;
+
+            pthread_create(&threads[i], NULL, handle_client, data);
+        }
+
+        for(int i = 0; i < N_CLIENT; i++)
+            pthread_join(threads[i], NULL);
+    }
+
+    FILE *output = fopen("out.txt", "w");
+    if(!output)
+        error("Can't open out.txt");
+    
     for(int i = 0; i < HEIGHT; i++)
     {
         for(int j = 0; j < WIDTH; j++)
@@ -64,7 +117,46 @@ int main(int argc, char *argv[])
     }
     fclose(output);
 
-    close(client_fd);
+    printf("[Server] Smoothed image saved in out.txt");
     close(server_fd);
     return 0;
+}
+
+
+
+void generate_blocks(Block *blocks) {
+    int idx = 0;
+    int num_blocks_y = HEIGHT / CLIENT_HEIGHT;
+    int num_blocks_x = WIDTH / CLIENT_WIDTH;
+
+    for (int by = 0; by < num_blocks_y; by++) {
+        for (int bx = 0; bx < num_blocks_x; bx++) {
+            blocks[idx++] = (Block){
+                .start_row = by * CLIENT_HEIGHT,
+                .start_col = bx * CLIENT_WIDTH,
+                .rows = CLIENT_HEIGHT,
+                .cols = CLIENT_WIDTH
+            };
+        }
+    }
+}
+
+void *handle_client(void *arg)
+{
+    ClientData *data = (ClientData *)arg;
+    int client_fd = data->client_fd;
+    Block block = data->block;
+
+    printf("[Server] Sending block of %dx%d starting in  [%d][%d] \n", data->block.rows, data->block.cols, data->block.start_row, data->block.start_col);
+
+
+    send(client_fd, &data->block, sizeof(block), 0);
+    send(client_fd, data->image, sizeof(int) * HEIGHT * WIDTH, 0);
+
+
+    recv(client_fd, data->result, sizeof(int) * HEIGHT * WIDTH, MSG_WAITALL);
+
+    close(client_fd);
+    free(data);
+    pthread_exit(NULL);
 }

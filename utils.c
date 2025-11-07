@@ -7,11 +7,11 @@ void error(const char *msg)
     exit(1);
 }
 
-void smooth_image(int input[HEIGHT][WIDTH], int output[HEIGHT][WIDTH])
+void smooth_image(int input[HEIGHT][WIDTH], int output[HEIGHT][WIDTH], Block *block)
 {
-    for(int i = 0; i < HEIGHT; i++)
+    for(int i = block->start_row; i < block->rows; i++)
     {
-        for(int j = 0; j < WIDTH; j++)
+        for(int j = block->start_col; j < block->cols; j++)
         {
             int sum = input[i][j];
             int count = 1;

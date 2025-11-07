@@ -1,9 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h> 
+#include "utils.h"
 
 #define WIDTH 2000
 #define HEIGHT 2000
 
+#define N_CLIENT 1
+#define N_BLOCKS 4
+#define CLIENT_HEIGHT 1000
+#define CLIENT_WIDTH 1000
 
 void smooth_image(int input[HEIGHT][WIDTH], int output[HEIGHT][WIDTH])
 {
@@ -28,6 +33,7 @@ void smooth_image(int input[HEIGHT][WIDTH], int output[HEIGHT][WIDTH])
     }
 }
 
+/*
 int main(int argc, char *argv[])
 {
     if(argc < 2)
@@ -83,5 +89,36 @@ int main(int argc, char *argv[])
     fclose(output);
 
     printf("Smoothing finished!");
+    return 0;
+}
+*/
+
+void generate_blocks(Block *blocks) {
+    int idx = 0;
+    int num_blocks_y = HEIGHT / CLIENT_HEIGHT;
+    int num_blocks_x = WIDTH / CLIENT_WIDTH;
+
+    for (int by = 0; by < num_blocks_y; by++) {
+        for (int bx = 0; bx < num_blocks_x; bx++) {
+            blocks[idx++] = (Block){
+                .start_row = by * CLIENT_HEIGHT,
+                .start_col = bx * CLIENT_WIDTH,
+                .rows = CLIENT_HEIGHT,
+                .cols = CLIENT_WIDTH
+            };
+        }
+    }
+}
+
+int main()
+{
+    Block blocks[N_BLOCKS];
+    generate_blocks(blocks);
+
+    for(int i = 0; i < N_BLOCKS; i++)
+    {
+        printf("Bloco %d: \n", i);
+        printf("Start row: %d | Start col: %d | rows: %d | cols: %d \n", blocks[i].start_row, blocks[i].start_col, blocks[i].rows, blocks[i].cols);
+    }
     return 0;
 }

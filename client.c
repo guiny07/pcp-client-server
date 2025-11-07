@@ -3,56 +3,54 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <pthread.h>
+
 #include "utils.h"
 
-void error(const char *msg) {
-    perror(msg);
-    exit(1);
-}
 
-int main() {
-    int sock = 0;
-    struct sockaddr_in serv_addr;
+int main()
+{
+    int sock;
+    struct sockaddr_in server_addr;
+
     static int image[HEIGHT][WIDTH];
     static int result[HEIGHT][WIDTH];
+    Block block;
 
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-        error("Erro ao criar socket");
+    //Creates socket
+    if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+        error("Can't create socket... \n");
 
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(PORT);
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(PORT);
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0)
-        error("Endereço inválido");
+    // Connects to the server
+    if(connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+        error("Connection failed \n");
 
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-        error("Falha na conexão");
+    printf("[Client] Connected to server. \n");
 
-    printf("Conectado ao servidor.\n");
+    // Receives the block
+    if(recv(sock, &block, sizeof(Block), MSG_WAITALL) <= 0)
+        error("Error receiving block. \n");
 
-    // Recebe a imagem
-    ssize_t received = recv(sock, image, sizeof(image), MSG_WAITALL);
-    if (received != sizeof(image))
-        fprintf(stderr, "Aviso: recebi %ld bytes, esperava %ld\n", received, sizeof(image));
+    // Receives the image
+    if(recv(sock, image, sizeof(image), MSG_WAITALL) <= 0)
+        error("Error receiving image. \n");
 
-    printf("Imagem recebida (%ld bytes)\n", received);
+    printf("[Client] Image received. Processing block... \n");
 
-    // Processa a imagem
-    for(int i = 0; i < HEIGHT; i++)
-    {
-        for(int j = 0; j < WIDTH; j++)
-        {
-            printf("%d ", image[i][j]);
-        }
-        printf("\n");
-    }
+    // Smoothing localy the image
+    smooth_image(image, result, &block);
 
-    smooth_image(image, result);
+    printf("[Client] Block processed. Sending back to the server... \n");
 
-    // Envia o resultado
+    // Send the resulting image partition. 
     send(sock, result, sizeof(result), 0);
-    printf("Resultado enviado.\n");
 
+    printf("[Client] Result sent. Closing connection... \n");
     close(sock);
+
     return 0;
 }
