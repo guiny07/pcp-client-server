@@ -6,12 +6,6 @@
 #include <pthread.h>
 #include "utils.h"
 
-
-#define N_CLIENT 2
-#define N_BLOCKS 2
-#define CLIENT_HEIGHT 1000
-#define CLIENT_WIDTH 2000
-
 void generate_blocks(Block *blocks);
 void *handle_client(void *arg);
 

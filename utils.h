@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <string.h> 
 
+#define N_CLIENT 2
+#define N_BLOCKS 2
+#define CLIENT_HEIGHT 1000
+#define CLIENT_WIDTH 2000
 #define WIDTH 2000
 #define HEIGHT 2000
 #define PORT 3124
