@@ -31,6 +31,20 @@ int main()
 
     printf("[Client] Connected to server. \n");
 
+    while(recv(sock, &block, sizeof(Block), MSG_WAITALL) > 0)
+    {
+        recv(sock, image, sizeof(image), MSG_WAITALL);
+
+         // Smoothing localy the image
+        smooth_image(image, result, &block);
+
+        printf("[Client] Block processed. Sending back to the server... \n");
+
+        // Send the resulting image partition. 
+        send(sock, result, sizeof(result), 0);
+    }
+
+    /*
     // Receives the block
     if(recv(sock, &block, sizeof(Block), MSG_WAITALL) <= 0)
         error("Error receiving block. \n");
@@ -48,8 +62,8 @@ int main()
 
     // Send the resulting image partition. 
     send(sock, result, sizeof(result), 0);
-
-    printf("[Client] Result sent. Closing connection... \n");
+    */
+    printf("[Client] Closing connection... \n");
     close(sock);
 
     return 0;

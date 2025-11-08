@@ -7,10 +7,10 @@
 #include "utils.h"
 
 
-#define N_CLIENT 1
-#define N_BLOCKS 2 
-#define CLIENT_HEIGHT 2000
-#define CLIENT_WIDTH 1000
+#define N_CLIENT 2
+#define N_BLOCKS 2
+#define CLIENT_HEIGHT 1000
+#define CLIENT_WIDTH 2000
 
 void generate_blocks(Block *blocks);
 void *handle_client(void *arg);
@@ -75,10 +75,8 @@ int main(int argc, char *argv[])
             send(client_fd, &blocks[i], sizeof(Block), 0);
             send(client_fd, image, sizeof(image), 0);
 
+            recv(client_fd, result, sizeof(result), MSG_WAITALL);
         }
-
-        recv(client_fd, result, sizeof(result), MSG_WAITALL);
-
     }
     else
     {
@@ -86,7 +84,7 @@ int main(int argc, char *argv[])
         {
             int client_fd = accept(server_fd, (struct sockaddr *)&address, &addrlen);
             if(client_fd < 0)
-            error("Accept error \n");
+                error("Accept error \n");
 
             printf("[Server] Client %d connected. \n", i);
 
