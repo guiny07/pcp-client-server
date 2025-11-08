@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
         {
             int client_fd = accept(server_fd, (struct sockaddr *)&address, &addrlen);
             if(client_fd < 0)
-                error("Accept error \n");
+            error("Accept error \n");
 
             printf("[Server] Client %d connected. \n", i);
 
@@ -144,6 +144,8 @@ void *handle_client(void *arg)
     ClientData *data = (ClientData *)arg;
     int client_fd = data->client_fd;
     Block block = data->block;
+    int block_result[CLIENT_HEIGHT][CLIENT_WIDTH];
+    size_t block_size = block.rows * block.cols * sizeof(int);
 
     printf("[Server] Sending block of %dx%d starting in  [%d][%d] \n", data->block.rows, data->block.cols, data->block.start_row, data->block.start_col);
 
@@ -152,7 +154,12 @@ void *handle_client(void *arg)
     send(client_fd, data->image, sizeof(int) * HEIGHT * WIDTH, 0);
 
 
-    recv(client_fd, data->result, sizeof(int) * HEIGHT * WIDTH, MSG_WAITALL);
+    recv(client_fd, block_result, block_size, MSG_WAITALL);
+
+    for (int i = 0; i < block.rows; i++) 
+    {
+        memcpy(&data->result[block.start_row + i][block.start_col], &block_result[i], block.cols * sizeof(int));
+    }
 
     close(client_fd);
     free(data);

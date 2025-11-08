@@ -33,17 +33,21 @@ int main()
 
     while(recv(sock, &block, sizeof(Block), MSG_WAITALL) > 0)
     {
+        int block_result[block.rows * block.cols];
         recv(sock, image, sizeof(image), MSG_WAITALL);
 
          // Smoothing localy the image
         smooth_image(image, result, &block);
 
+
+        for (int i = 0; i < block.rows; i++) {
+        memcpy(&block_result[i * block.cols], &result[block.start_row + i][block.start_col], block.cols * sizeof(int));
         printf("[Client] Block processed. Sending back to the server... \n");
 
         // Send the resulting image partition. 
-        send(sock, result, sizeof(result), 0);
+        send(sock, block_result, sizeof(int) * block.rows * block.cols, 0);
+        }
     }
-
     /*
     // Receives the block
     if(recv(sock, &block, sizeof(Block), MSG_WAITALL) <= 0)
